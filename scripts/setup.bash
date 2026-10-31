@@ -7,8 +7,13 @@ TFLINT_VERSION="0.64.0"
 TRIVY_VERSION="0.75.0"
 GITLEAKS_VERSION="8.30.1"
 NODE_VERSION="24.21.0"
+AWS_CLI_VERSION="2.39.3"
 
 die() { echo "setup: $*" >&2; exit 1; }
+
+if [[ "$(uname -s)" == Darwin ]]; then
+  PATH="${PATH}:/usr/sbin:/sbin"
+fi
 
 command -v curl >/dev/null || die "curl is required"
 command -v tar >/dev/null || die "tar is required"
@@ -43,10 +48,12 @@ version_of() {
     trivy) out="$(trivy --version 2>&1 || true)" ;;
     gitleaks) out="$(gitleaks version 2>&1 || true)" ;;
     node) out="$(node --version 2>&1 || true)" ;;
+    aws) out="$(aws --version 2>&1 || true)" ;;
     *) return 1 ;;
   esac
   out="${out%%$'\n'*}"
-  printf '%s\n' "$out" | grep -Eo '[0-9]+\.[0-9]+\.[0-9]+' || true
+  out="$(printf '%s\n' "$out" | grep -Eo '[0-9]+\.[0-9]+\.[0-9]+' || true)"
+  printf '%s\n' "${out%%$'\n'*}"
 }
 
 matches() {
@@ -61,12 +68,27 @@ matches() {
 
 place_binary() {
   local src="$1" name="$2" found=""
+  run_root mkdir -p "$BIN"
   run_root install -m 0755 "$src" "$BIN/$name"
   hash -r
   found="$(command -v "$name" || true)"
   if [[ -n "$found" && "$found" != "$BIN/$name" ]]; then
     echo "replacing $found (it is ahead of $BIN on PATH)"
     run_root install -m 0755 "$src" "$found"
+    hash -r
+  fi
+}
+
+place_link() {
+  local src="$1" name="$2" found=""
+  [[ -x "$src" ]] || die "missing $src"
+  run_root mkdir -p "$BIN"
+  run_root ln -sfn "$src" "$BIN/$name"
+  hash -r
+  found="$(command -v "$name" || true)"
+  if [[ -n "$found" && "$found" != "$BIN/$name" ]]; then
+    echo "replacing $found (it is ahead of $BIN on PATH)"
+    run_root ln -sfn "$src" "$found"
     hash -r
   fi
 }
@@ -101,6 +123,7 @@ install_tool() {
       ;;
     node)
       [[ "$archive" == *.tar.gz ]] || command -v xz >/dev/null || die "xz is required to unpack Node"
+      run_root mkdir -p /usr/local
       if [[ "$archive" == *.tar.xz ]]; then
         run_root tar -xJf "$archive" -C /usr/local --strip-components=1
       else
@@ -114,6 +137,119 @@ install_tool() {
   got="$(version_of "$name")"
   matches "$got" "$want" "$mode" || die "$name on PATH is '${got:-missing}', wanted $want ($(command -v "$name" || echo not found))"
   echo "installed  $name $got  $(command -v "$name")"
+}
+
+verify_aws_pkg() {
+  local pkg="$1" out team="94KV3E626L"
+  if ! out="$(pkgutil --check-signature "$pkg" 2>&1)"; then
+    die "AWS CLI pkg signature check failed"
+  fi
+  case "$out" in
+    *"signed by a developer certificate issued by Apple for distribution"*) ;;
+    *) die "AWS CLI pkg is not signed by an Apple Developer ID" ;;
+  esac
+  case "$out" in
+    *"($team)"*) ;;
+    *) die "AWS CLI pkg is signed by an unexpected developer team" ;;
+  esac
+}
+
+verify_aws_sig() {
+  local archive="$1" sig="$2" gpghome="$tmpdir/gpghome" keyfile="$tmpdir/aws-cli.key" verify_out
+  mkdir -m 700 "$gpghome"
+  cat >"$keyfile" <<'EOF'
+-----BEGIN PGP PUBLIC KEY BLOCK-----
+
+mQINBF2Cr7UBEADJZHcgusOJl7ENSyumXh85z0TRV0xJorM2B/JL0kHOyigQluUG
+ZMLhENaG0bYatdrKP+3H91lvK050pXwnO/R7fB/FSTouki4ciIx5OuLlnJZIxSzx
+PqGl0mkxImLNbGWoi6Lto0LYxqHN2iQtzlwTVmq9733zd3XfcXrZ3+LblHAgEt5G
+TfNxEKJ8soPLyWmwDH6HWCnjZ/aIQRBTIQ05uVeEoYxSh6wOai7ss/KveoSNBbYz
+gbdzoqI2Y8cgH2nbfgp3DSasaLZEdCSsIsK1u05CinE7k2qZ7KgKAUIcT/cR/grk
+C6VwsnDU0OUCideXcQ8WeHutqvgZH1JgKDbznoIzeQHJD238GEu+eKhRHcz8/jeG
+94zkcgJOz3KbZGYMiTh277Fvj9zzvZsbMBCedV1BTg3TqgvdX4bdkhf5cH+7NtWO
+lrFj6UwAsGukBTAOxC0l/dnSmZhJ7Z1KmEWilro/gOrjtOxqRQutlIqG22TaqoPG
+fYVN+en3Zwbt97kcgZDwqbuykNt64oZWc4XKCa3mprEGC3IbJTBFqglXmZ7l9ywG
+EEUJYOlb2XrSuPWml39beWdKM8kzr1OjnlOm6+lpTRCBfo0wa9F8YZRhHPAkwKkX
+XDeOGpWRj4ohOx0d2GWkyV5xyN14p2tQOCdOODmz80yUTgRpPVQUtOEhXQARAQAB
+tCFBV1MgQ0xJIFRlYW0gPGF3cy1jbGlAYW1hem9uLmNvbT6JAlQEEwEIAD4CGwMF
+CwkIBwIGFQoJCAsCBBYCAwECHgECF4AWIQT7Xbd/1cEYuAURraimMQrMRnJHXAUC
+akV0ygUJDqP4lQAKCRCmMQrMRnJHXFHjD/9eyZLYcKuQOlLvtqSDtUBiEZf6ZZjM
+i3ygYH8rJNtuToUH+HvSpe819urJCquXhDrlK6N+aqW0hCLtNABJG/vsafIgvIYJ
+hSGgpgtNnQyMV1jViRWqPjbouw8OkYKBThUfT1i2Y+wn58ifs6ODBCmTexWtXspA
+Si+Gt49xDOW0APmbOPnI+a4HJW6tVEo6MWS0WjzpiBayR3d1A4pt4YrPfSdDgpLo
+h2SLQqlRqvvVZJaWBjhkErNFpfsBA06sDcPEOb0G8LBUbR4WOcdvhe5LubJbZuxC
+AG9kNPCVeQP1ixwjgjXKysaxeQ6rv0VzIQgRp6tLVLWhy6AKDNvLjFSsmXZ1Wl08
+Y/RlOHXlzLuQMRE6sR1wOdRxc9TsrNWTGiBK65cvSWOy03JeBkQQ8pesqltiyxI9
+U21kkgiXtTSKNGfKK8pO27D81YANhRqPK7iTp6kuFiY2WtOg90KTMNlIT+Ff85Y2
+b1rHj6Z0SrCkJujhWk3IBPic/wJgz01LEc/OAdUPlby90RJZcIBhSlWhT7mXnXIO
+c0HWlNQrns2s3CTyYwZSiSlYe9ApeLwhjDo8NhbFuCAy61l6O5UsR4AfZxx/rGKv
+2wFb1/RN/P4gNe6vmxZAPjR0AQcwD3tc2McimOLr/22kmPz8IH3I0X7WoSFr0Biz
+E91G7bb0hOb/cA==
+=knv7
+-----END PGP PUBLIC KEY BLOCK-----
+EOF
+  gpg --homedir "$gpghome" --batch --no-autostart --import "$keyfile" >/dev/null 2>&1 || true
+  if ! verify_out="$(gpg --homedir "$gpghome" --batch --no-autostart --verify "$sig" "$archive" 2>&1)"; then
+    die "AWS CLI signature verification failed: $verify_out"
+  fi
+}
+
+install_aws() {
+  local want="$1" url="$2" archive_name="$3" kind="$4"
+  local got archive sig src completer
+  got="$(version_of aws)"
+  if matches "$got" "$want" exact; then
+    echo "ok  aws $got  $(command -v aws)"
+    return 0
+  fi
+
+  case "$kind" in
+    pkg)
+      command -v pkgutil >/dev/null || die "pkgutil is required to verify the AWS CLI installer"
+      command -v installer >/dev/null || die "installer is required to install the AWS CLI"
+      ;;
+    zip)
+      command -v gpg >/dev/null || die "gpg is required to verify the AWS CLI installer"
+      ;;
+    *) die "unknown aws archive kind $kind" ;;
+  esac
+
+  archive="$tmpdir/$archive_name"
+  echo "+ curl -fsSL -o $archive_name"
+  echo "  $url"
+  curl -fsSL --retry 3 --retry-delay 2 -o "$archive" "$url"
+
+  case "$kind" in
+    pkg)
+      verify_aws_pkg "$archive"
+      run_root installer -pkg "$archive" -target /
+      src=/usr/local/aws-cli/aws
+      completer=/usr/local/aws-cli/aws_completer
+      ;;
+    zip)
+      sig="$tmpdir/$archive_name.sig"
+      echo "+ curl -fsSL -o ${archive_name}.sig"
+      echo "  ${url}.sig"
+      curl -fsSL --retry 3 --retry-delay 2 -o "$sig" "${url}.sig"
+      verify_aws_sig "$archive" "$sig"
+      unzip -q -o "$archive" -d "$tmpdir"
+      chmod +x "$tmpdir/aws/install"
+      run_root mkdir -p "$BIN"
+      if [[ -x /usr/local/aws-cli/v2/current/bin/aws ]]; then
+        run_root "$tmpdir/aws/install" --bin-dir "$BIN" --install-dir /usr/local/aws-cli --update
+      else
+        run_root "$tmpdir/aws/install" --bin-dir "$BIN" --install-dir /usr/local/aws-cli
+      fi
+      src=/usr/local/aws-cli/v2/current/bin/aws
+      completer=/usr/local/aws-cli/v2/current/bin/aws_completer
+      ;;
+  esac
+
+  place_link "$src" aws
+  place_link "$completer" aws_completer
+  got="$(version_of aws)"
+  matches "$got" "$want" exact || die "aws on PATH is '${got:-missing}', wanted $want ($(command -v aws || echo not found))"
+  echo "installed  aws $got  $(command -v aws)"
 }
 
 require_cmd() {
@@ -136,6 +272,7 @@ case "$(uname -s)-$(uname -m)" in
     node_os=linux-x64; node_ext=tar.xz
     make_hint="sudo apt-get install make"
     ssh_hint="sudo apt-get install openssh-client"
+    aws_kind=zip; aws_arch=x86_64
     ;;
   Linux-aarch64)
     tf_os=linux; tf_arch=arm64
@@ -145,6 +282,7 @@ case "$(uname -s)-$(uname -m)" in
     node_os=linux-arm64; node_ext=tar.xz
     make_hint="sudo apt-get install make"
     ssh_hint="sudo apt-get install openssh-client"
+    aws_kind=zip; aws_arch=aarch64
     ;;
   Darwin-arm64)
     tf_os=darwin; tf_arch=arm64
@@ -154,6 +292,7 @@ case "$(uname -s)-$(uname -m)" in
     node_os=darwin-arm64; node_ext=tar.gz
     make_hint="xcode-select --install"
     ssh_hint="ssh ships with macOS"
+    aws_kind=pkg
     ;;
   Darwin-x86_64)
     tf_os=darwin; tf_arch=amd64
@@ -163,6 +302,7 @@ case "$(uname -s)-$(uname -m)" in
     node_os=darwin-x64; node_ext=tar.gz
     make_hint="xcode-select --install"
     ssh_hint="ssh ships with macOS"
+    aws_kind=pkg
     ;;
   *) die "unsupported platform $(uname -s) $(uname -m)" ;;
 esac
@@ -217,16 +357,15 @@ install_tool node "$node_want" "$node_mode" \
   "https://nodejs.org/dist/v${node_install}/SHASUMS256.txt" \
   "$node_tar" node
 
+if [[ "$aws_kind" == zip ]]; then
+  aws_archive="awscli-exe-linux-${aws_arch}-${AWS_CLI_VERSION}.zip"
+else
+  aws_archive="AWSCLIV2-${AWS_CLI_VERSION}.pkg"
+fi
+install_aws "$AWS_CLI_VERSION" \
+  "https://awscli.amazonaws.com/${aws_archive}" \
+  "$aws_archive" "$aws_kind"
+
 require_cmd make "$make_hint"
 require_cmd ssh "$ssh_hint"
 [[ "$missing" -eq 0 ]]
-
-
-# install aws cli
-if ! command -v aws &> /dev/null; then
-    echo "Installing aws cli..."
-    curl -fsSL https://awscli.amazonaws.com/v2/install.sh | bash
-    unzip awscliv2.zip
-fi
-
-aws --version
