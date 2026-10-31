@@ -3,5 +3,5 @@ source-env-file:
 	@echo "NOTICE: this will be per terminal session"
 
 setup-local-project-deps:
-	@echo "+ bash scripts/setup-local-project-deps.bash"
-	@bash scripts/setup-local-project-deps.bash
+	@echo "+ bash scripts/tools/setup-local-project-deps.bash"
+	@bash scripts/tools/setup-local-project-deps.bash
