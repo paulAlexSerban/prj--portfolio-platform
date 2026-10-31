@@ -1,7 +1,7 @@
-source_env_file:
+source-env-file:
 	@echo "run manually: 'set -a && source .env && set +a'"
 	@echo "NOTICE: this will be per terminal session"
 
-setup:
-	@echo "+ bash scripts/setup.bash"
-	@bash scripts/setup.bash
+setup-local-project-deps:
+	@echo "+ bash scripts/setup-local-project-deps.bash"
+	@bash scripts/setup-local-project-deps.bash
