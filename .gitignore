@@ -148,3 +148,9 @@ vite.config.ts.timestamp-*
 # Turbo Repo
 .turbo
 tmp/
+
+# Terraform
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+.terraform.tfstate.lock.info
