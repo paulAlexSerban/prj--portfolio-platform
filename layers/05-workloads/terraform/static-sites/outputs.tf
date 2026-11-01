@@ -16,6 +16,7 @@ output "preview_urls" {
     quiz      = "https://${module.static_site_quiz.cloudfront_domain_name}"
     news      = "https://${module.static_site_news.cloudfront_domain_name}"
     news_data = "https://${module.news_data_cdn.cloudfront_domain_name}"
+    assets    = "https://${module.assets_cdn.cloudfront_domain_name}"
   }
 }
 
@@ -27,7 +28,13 @@ output "cloudfront_domain_names" {
     quiz      = module.static_site_quiz.cloudfront_domain_name
     news      = module.static_site_news.cloudfront_domain_name
     news_data = module.news_data_cdn.cloudfront_domain_name
+    assets    = module.assets_cdn.cloudfront_domain_name
   }
+}
+
+output "assets_bucket_name" {
+  description = "S3 bucket content--paulserban.eu writes with push:assets. Set as S3_ASSETS_BUCKET."
+  value       = module.assets_cdn.bucket_name
 }
 
 output "github_actions_role_arn" {

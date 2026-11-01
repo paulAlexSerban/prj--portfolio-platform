@@ -13,7 +13,7 @@ Deploy definitions for the things the platform runs. Application source stays in
 - `quiz.paulserban.eu` (SPA fallback)
 - `news-feed.paulserban.eu`
 - `news-data.paulserban.eu` (RSS JSON)
-- alias records for `assets.paulserban.eu`, which still points at the distribution in the old account
+- `assets.paulserban.eu` (private bucket, filled by `content--paulserban.eu`)
 
 State key is `05-workloads/static-sites/prod.tfstate`. Modules come from `modules/terraform/`. The hosted zone is looked up by name, so the dns-zone stack has to exist first, and the OIDC provider stack has to exist before the roles can be created.
 

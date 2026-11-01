@@ -33,11 +33,9 @@ locals {
     quiz      = "pserban-quiz-prod-${var.bucket_suffix}"
     news      = "pserban-news-feed-prod-${var.bucket_suffix}"
     news_data = "pserban-news-data-prod-${var.bucket_suffix}"
+    assets    = "pserban-assets-prod-${var.bucket_suffix}"
     logs      = "pserban-cf-logs-prod-${var.bucket_suffix}"
   }
-
-  # Same hosted zone id for every CloudFront distribution.
-  cloudfront_hosted_zone_id = "Z2FDTNDATAQYW2"
 
   tags = {
     env         = "prod"
@@ -206,30 +204,21 @@ module "news_data_cdn" {
   access_logging_prefix = "${local.domains.news_data}/"
 }
 
-# assets.paulserban.eu stays on the old account's distribution until that bucket
-# moves. These records only matter once this zone is delegated.
-resource "aws_route53_record" "assets_a" {
-  zone_id = data.aws_route53_zone.this.zone_id
-  name    = local.domains.assets
-  type    = "A"
-
-  alias {
-    name                   = var.assets_cloudfront_domain_name
-    zone_id                = local.cloudfront_hosted_zone_id
-    evaluate_target_health = false
+module "assets_cdn" {
+  source = "../../../../modules/terraform/assets-cdn"
+  providers = {
+    aws           = aws
+    aws.us_east_1 = aws.us_east_1
   }
-}
 
-resource "aws_route53_record" "assets_aaaa" {
-  zone_id = data.aws_route53_zone.this.zone_id
-  name    = local.domains.assets
-  type    = "AAAA"
+  domain_name          = local.domains.assets
+  bucket_name          = local.buckets.assets
+  hosted_zone_id       = data.aws_route53_zone.this.zone_id
+  enable_custom_domain = var.custom_domain_enabled["assets"]
+  tags                 = merge(local.tags, { project = "assets" })
 
-  alias {
-    name                   = var.assets_cloudfront_domain_name
-    zone_id                = local.cloudfront_hosted_zone_id
-    evaluate_target_health = false
-  }
+  access_logging_bucket = aws_s3_bucket.cf_access_logs.bucket_domain_name
+  access_logging_prefix = "${local.domains.assets}/"
 }
 
 module "github_oidc_deploy_role" {

@@ -14,7 +14,9 @@ STATIC_SITES_CERT_TARGETS := \
 	-target=module.static_site_news.aws_acm_certificate.site \
 	-target=module.static_site_news.aws_route53_record.cert_validation \
 	-target=module.news_data_cdn.aws_acm_certificate.data \
-	-target=module.news_data_cdn.aws_route53_record.cert_validation
+	-target=module.news_data_cdn.aws_route53_record.cert_validation \
+	-target=module.assets_cdn.aws_acm_certificate.assets \
+	-target=module.assets_cdn.aws_route53_record.cert_validation
 
 source-env-file:
 	@echo "run manually: 'set -a && source .env && set +a'"

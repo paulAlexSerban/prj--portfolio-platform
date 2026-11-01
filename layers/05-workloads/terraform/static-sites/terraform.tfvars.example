@@ -11,7 +11,5 @@ bucket_suffix = "7f3a" # pick your own; bucket names are global
 #   quiz      = false
 #   news      = false
 #   news_data = false
+#   assets    = false
 # }
-
-# Assets CDN still served by the old account. Override only if that distribution changes.
-# assets_cloudfront_domain_name = "d31dr77x3y18fg.cloudfront.net"

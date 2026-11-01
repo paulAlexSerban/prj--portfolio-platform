@@ -14,7 +14,7 @@ Terraform for the new account lives in this repo. The deploy workflows stay in `
 - `gh` is authenticated for `paulAlexSerban/prj--personal-portfolio--v3`.
 - At least 24 hours before step 4, lower the TTL of the site A and AAAA records in the old zone to 60 seconds.
 
-`assets.paulserban.eu` is out of scope. The new zone gets an alias to the existing distribution (`d31dr77x3y18fg.cloudfront.net`). The content repo keeps writing the old bucket.
+`assets.paulserban.eu` is provisioned by `modules/terraform/assets-cdn` in this stack. Leave `custom_domain_enabled.assets` false until the hostname move below. `content--paulserban.eu` writes `pserban-assets-prod-<suffix>` (`S3_ASSETS_BUCKET`, region `eu-central-1`).
 
 ## 1. Build the stack with no custom domains
 
@@ -91,7 +91,17 @@ While step 1 is done and step 3 is not, the hostname points at a distribution th
 
 When every site above responds from the new account, set the registrar nameservers to the `name_servers` output of the dns-zone stack (`make terraform-dns-zone-output` writes `.env.name_servers`).
 
-Confirm with `dig` from more than one resolver. Watch the sites for a few days. The assets alias in the new zone already points at the old distribution, so `assets.paulserban.eu` keeps working after delegation.
+Confirm with `dig` from more than one resolver. Watch the sites for a few days.
+
+## Assets hostname
+
+`assets.paulserban.eu` uses `modules/terraform/assets-cdn`. The bucket is private. CloudFront reads it with Origin Access Control.
+
+1. Apply with `custom_domain_enabled.assets` set to `false`. That creates the bucket `pserban-assets-prod-<suffix>`, the certificate, its validation CNAME, and a distribution on its `*.cloudfront.net` name. It does not attach the hostname.
+2. In `content--paulserban.eu`, set `S3_BUCKET_REGION=eu-central-1` and `S3_ASSETS_BUCKET` to that bucket. Run `make process_assets`, then `make push_to_s3`. Open a file on the preview URL from `terraform output preview_urls` before moving the hostname. An empty bucket serves 404s.
+3. If the old distribution still lists `assets.paulserban.eu`, attach the issued certificate to the new distribution, publish TXT `_assets.paulserban.eu` with the new distribution domain, and run `aws cloudfront associate-alias`. A cross-account move needs the source distribution disabled or deleted.
+4. Set `custom_domain_enabled.assets` to `true` and apply. This attaches the certificate and writes the A and AAAA aliases.
+5. Open `https://assets.paulserban.eu/assets/...` and confirm an image the portfolio pages load returns 200.
 
 ## 6. Roll back
 

@@ -29,18 +29,13 @@ variable "custom_domain_enabled" {
     quiz      = false
     news      = false
     news_data = false
+    assets    = false
   }
 
   validation {
-    condition     = sort(keys(var.custom_domain_enabled)) == sort(["blog", "news", "news_data", "portfolio", "quiz"])
-    error_message = "custom_domain_enabled must contain exactly the keys portfolio, blog, quiz, news, and news_data."
+    condition     = sort(keys(var.custom_domain_enabled)) == sort(["assets", "blog", "news", "news_data", "portfolio", "quiz"])
+    error_message = "custom_domain_enabled must contain exactly the keys portfolio, blog, quiz, news, news_data, and assets."
   }
-}
-
-variable "assets_cloudfront_domain_name" {
-  description = "CloudFront domain of the assets distribution that still lives in the old account. This stack aliases assets.<domain> at it until that CDN moves. Public DNS name, taken from the zone export."
-  type        = string
-  default     = "d31dr77x3y18fg.cloudfront.net"
 }
 
 variable "github_org" {
