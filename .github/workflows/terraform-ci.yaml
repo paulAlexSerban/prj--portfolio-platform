@@ -1,0 +1,55 @@
+name: Terraform CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  terraform:
+    name: fmt, validate, tflint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Read Terraform version
+        id: tfversion
+        run: echo "version=$(tr -d '[:space:]' < .terraform-version)" >> "$GITHUB_OUTPUT"
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ steps.tfversion.outputs.version }}
+          terraform_wrapper: false
+
+      - name: terraform fmt
+        run: terraform fmt -check -recursive
+
+      - name: terraform init and validate
+        run: |
+          set -euo pipefail
+          for dir in \
+            layers/01-foundation/terraform/dns-zone \
+            layers/01-foundation/terraform/github-oidc-provider \
+            layers/05-workloads/terraform/static-sites
+          do
+            echo "== ${dir}"
+            terraform -chdir="$dir" init -backend=false -input=false
+            terraform -chdir="$dir" validate
+          done
+
+      - name: Setup tflint
+        uses: terraform-linters/setup-tflint@v4
+        with:
+          tflint_version: v0.64.0
+
+      - name: tflint init
+        run: tflint --init
+
+      - name: tflint
+        run: tflint --recursive --config "${{ github.workspace }}/.tflint.hcl"

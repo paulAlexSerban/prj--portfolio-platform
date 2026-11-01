@@ -1,0 +1,70 @@
+function handler(event) {
+  var request = event.request;
+  var headers = request.headers;
+  var uri = request.uri;
+
+%{ for rule in redirect_rules ~}
+  if (uri === '${rule.path_prefix}' || uri.indexOf('${rule.path_prefix}/') === 0) {
+%{ if try(rule.strip_prefix, true) ~}
+    var remainder = uri === '${rule.path_prefix}' ? '/' : uri.substring('${rule.path_prefix}'.length);
+%{ else ~}
+    var remainder = uri;
+%{ endif ~}
+    var qs = '';
+    var params = Object.keys(request.querystring || {});
+    if (params.length > 0) {
+      qs =
+        '?' +
+        params
+          .map(function (k) {
+            var p = request.querystring[k];
+            if (p.multiValue) {
+              return p.multiValue
+                .map(function (v) {
+                  return encodeURIComponent(k) + '=' + encodeURIComponent(v.value);
+                })
+                .join('&');
+            }
+            return encodeURIComponent(k) + '=' + encodeURIComponent(p.value);
+          })
+          .join('&');
+    }
+
+    return {
+      statusCode: ${rule.permanent ? 301 : 302},
+      statusDescription: '${rule.permanent ? "Moved Permanently" : "Found"}',
+      headers: {
+        location: { value: 'https://${rule.target_domain}' + remainder + qs },
+      },
+    };
+  }
+%{ endfor ~}
+
+%{ if basic_auth_enabled ~}
+  var expected = '${auth_header_value}';
+
+  if (
+    typeof headers.authorization === 'undefined' ||
+    headers.authorization.value !== expected
+  ) {
+    return {
+      statusCode: 401,
+      statusDescription: 'Unauthorized',
+      headers: {
+        'www-authenticate': { value: 'Basic realm="${realm}"' },
+      },
+    };
+  }
+%{ endif ~}
+
+  // CloudFront default_root_object only applies to "/". Astro emits
+  // directory/index.html with trailingSlash: "always", so rewrite
+  // "/post/slug/" -> "/post/slug/index.html" (and bare dirs without slash).
+  if (uri.endsWith('/')) {
+    request.uri = uri + 'index.html';
+  } else if (!uri.includes('.')) {
+    request.uri = uri + '/index.html';
+  }
+
+  return request;
+}
