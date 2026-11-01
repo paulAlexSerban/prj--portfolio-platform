@@ -1,13 +1,18 @@
 terraform {
-  required_version = ">= 1.5.0"
+  required_version = ">= 1.10.0"
+
   required_providers {
     aws = {
       source  = "hashicorp/aws"
       version = "~> 5.70"
     }
   }
-}
 
-# Credentials and region come from the standard AWS environment variables
-# (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION) loaded from .env.
-provider "aws" {}
+  # bucket and region are supplied at init time:
+  #   terraform init -backend-config="bucket=$TF_STATE_BUCKET" -backend-config="region=$AWS_REGION"
+  backend "s3" {
+    key          = "portfolio-platform/terraform.tfstate"
+    encrypt      = true
+    use_lockfile = true
+  }
+}
