@@ -53,15 +53,15 @@ make terraform-bootstrap-state-bucket
 
 The script creates the bucket when it is missing, then enables versioning, AES256 encryption, a full public-access block, and bucket-owner-enforced ownership. Running it again reapplies those settings.
 
-Initialize Terraform against that bucket. State is stored at `portfolio-platform/terraform.tfstate`, encrypted, with native S3 locking:
+Initialize Terraform against that bucket. State is stored at `portfolio-platform/terraform.tfstate`, encrypted, with native S3 locking. The DNS stack lives in `layers/01-foundation/terraform/dns-zone` (`STACK` in the makefile):
 
 ```bash
-make terraform-init
+make terraform-dns-zone-init
 ```
 
 ## 3. Provision the hosted zone in the target account
 
-Terraform in `infrastructure/provisioning/terraform/` creates the public hosted zone (`paulserban.eu` by default) and the SEO and ownership records taken from the export:
+Terraform in `layers/01-foundation/terraform/dns-zone/` creates the public hosted zone (`paulserban.eu` by default) and the SEO and ownership records taken from the export:
 
 - Google site-verification TXT
 - DMARC TXT
@@ -71,14 +71,14 @@ Terraform in `infrastructure/provisioning/terraform/` creates the public hosted 
 Apex NS and SOA records are created by the hosted zone itself. CloudFront alias records are not in this configuration.
 
 ```bash
-make terraform-plan
-make terraform-apply
+make terraform-dns-zone-plan
+make terraform-dns-zone-apply
 ```
 
 After apply:
 
 ```bash
-make terraform-output
+make terraform-dns-zone-output
 ```
 
 `name_servers` is the delegation target for the new zone. Updating the domain registrar is a separate step and is not done by this Terraform.
@@ -86,5 +86,5 @@ make terraform-output
 ## 4. Destroy the hosted zone in the target account
 
 ```bash
-make terraform-destroy
+make terraform-dns-zone-destroy
 ```

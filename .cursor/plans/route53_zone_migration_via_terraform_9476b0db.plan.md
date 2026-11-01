@@ -1,6 +1,6 @@
 ---
 name: Route53 Zone Migration via Terraform
-overview: Transform the exported Route 53 record set JSON for `paulserban.eu` into a data-driven Terraform configuration under `infrastructure/provisioning/terraform/`, provisioning the hosted zone and its non-infrastructure DNS/SEO records (verification, DMARC, DKIM, ACM validation) in the target AWS account using credentials from `.env`. CloudFront alias (A/AAAA) records and S3 buckets are out of scope — they will be recreated and wired up separately.
+overview: Transform the exported Route 53 record set JSON for `paulserban.eu` into a data-driven Terraform configuration under `layers/01-foundation/terraform/dns-zone/`, provisioning the hosted zone and its non-infrastructure DNS/SEO records (verification, DMARC, DKIM, ACM validation) in the target AWS account using credentials from `.env`. CloudFront alias (A/AAAA) records and S3 buckets are out of scope — they will be recreated and wired up separately.
 todos:
   - id: main-tf
     content: Write terraform/provider block in main.tf
@@ -38,7 +38,7 @@ provider "aws" {}
 
 User runs `set -a && source .env && set +a` (per existing [makefile](makefile) target `source-env-file`) before `terraform plan/apply`, pointing at the target account.
 
-## Files to create in `infrastructure/provisioning/terraform/`
+## Files to create in `layers/01-foundation/terraform/dns-zone/`
 - `main.tf` (currently empty) — `terraform {}` block with `required_version` + `required_providers { aws }`, and `provider "aws" {}`
 - `variables.tf` — `variable "domain_name"` (default `"paulserban.eu"`)
 - `route53_zone.tf` — the hosted zone:

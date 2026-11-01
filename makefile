@@ -1,3 +1,5 @@
+DNS_ZONE_STACK ?= layers/01-foundation/terraform/dns-zone
+
 source-env-file:
 	@echo "run manually: 'set -a && source .env && set +a'"
 	@echo "NOTICE: this will be per terminal session"
@@ -7,23 +9,23 @@ setup-local-project-deps:
 	@bash scripts/tools/setup-local-project-deps.bash
 
 terraform-bootstrap-state-bucket:
-	@echo "+ bash scripts/one-time/bootstrap-terraform-state-bucket.bash"
-	@bash scripts/one-time/bootstrap-terraform-state-bucket.bash
+	@echo "+ bash layers/01-foundation/bootstrap/bootstrap-terraform-state-bucket.bash"
+	@bash layers/01-foundation/bootstrap/bootstrap-terraform-state-bucket.bash
 
-terraform-portfolio-plan-init:
-	terraform -chdir=infrastructure/provisioning/terraform init \
+terraform-dns-zone-init:
+	terraform -chdir=$(DNS_ZONE_STACK) init \
 		-backend-config="bucket=$$TF_STATE_BUCKET" \
 		-backend-config="region=$$AWS_REGION"
 
-terraform-portfolio-plan-plan:
-	terraform -chdir=infrastructure/provisioning/terraform plan
+terraform-dns-zone-plan:
+	terraform -chdir=$(DNS_ZONE_STACK) plan
 
-terraform-portfolio-plan-apply:
-	terraform -chdir=infrastructure/provisioning/terraform apply
+terraform-dns-zone-apply:
+	terraform -chdir=$(DNS_ZONE_STACK) apply
 
-terraform-portfolio-plan-destroy:
-	terraform -chdir=infrastructure/provisioning/terraform destroy
+terraform-dns-zone-destroy:
+	terraform -chdir=$(DNS_ZONE_STACK) destroy
 
-terraform-portfolio-plan-output:
-	terraform -chdir=infrastructure/provisioning/terraform output name_servers > .env.name_servers
-	terraform -chdir=infrastructure/provisioning/terraform output zone_id > .env.zone_id
+terraform-dns-zone-output:
+	terraform -chdir=$(DNS_ZONE_STACK) output name_servers > .env.name_servers
+	terraform -chdir=$(DNS_ZONE_STACK) output zone_id > .env.zone_id

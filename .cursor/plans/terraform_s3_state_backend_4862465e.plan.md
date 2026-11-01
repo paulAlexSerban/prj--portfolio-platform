@@ -1,6 +1,6 @@
 ---
 name: Terraform S3 State Backend
-overview: Configure the Terraform root in infrastructure/provisioning/terraform to store state in an S3 bucket (native S3 locking, partial backend config from .env), add a bootstrap script that creates the bucket, and revert main.tf to a plain real-AWS provider.
+overview: Configure the Terraform root in layers/01-foundation/terraform/dns-zone to store state in an S3 bucket (native S3 locking, partial backend config from .env), add a bootstrap script that creates the bucket, and revert main.tf to a plain real-AWS provider.
 todos:
   - id: revert-main
     content: Revert main.tf to plain provider "aws" {}
@@ -24,8 +24,8 @@ isProject: false
 ---
 
 ## Current state
-- [infrastructure/provisioning/terraform/versions.tf](infrastructure/provisioning/terraform/versions.tf): `required_version >= 1.5.0`, aws provider `~> 5.70`.
-- [infrastructure/provisioning/terraform/main.tf](infrastructure/provisioning/terraform/main.tf): LocalStack-style provider referencing `var.aws_endpoint`, which is **not defined** in `variables.tf` (config currently broken).
+- [layers/01-foundation/terraform/dns-zone/versions.tf](layers/01-foundation/terraform/dns-zone/versions.tf): `required_version >= 1.5.0`, aws provider `~> 5.70`.
+- [layers/01-foundation/terraform/dns-zone/main.tf](layers/01-foundation/terraform/dns-zone/main.tf): LocalStack-style provider referencing `var.aws_endpoint`, which is **not defined** in `variables.tf` (config currently broken).
 - Installed Terraform is v1.16.5, so native S3 locking is available.
 
 ## Decisions (confirmed)
@@ -36,14 +36,14 @@ isProject: false
 
 ## Changes
 
-1. [infrastructure/provisioning/terraform/main.tf](infrastructure/provisioning/terraform/main.tf)
+1. [layers/01-foundation/terraform/dns-zone/main.tf](layers/01-foundation/terraform/dns-zone/main.tf)
    Revert to:
    ```hcl
    # Credentials and region come from AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION (.env).
    provider "aws" {}
    ```
 
-2. [infrastructure/provisioning/terraform/versions.tf](infrastructure/provisioning/terraform/versions.tf)
+2. [layers/01-foundation/terraform/dns-zone/versions.tf](layers/01-foundation/terraform/dns-zone/versions.tf)
    - Raise `required_version` to `>= 1.10.0`.
    - Add an empty partial backend:
    ```hcl
@@ -58,7 +58,7 @@ isProject: false
 3. [.env.example](.env.example)
    Add `TF_STATE_BUCKET=xxx` (region reuses `AWS_REGION`).
 
-4. New `scripts/one-time/bootstrap-terraform-state-bucket.bash` (follows style of [scripts/one-time/export-route53-dns-zone-config.bash](scripts/one-time/export-route53-dns-zone-config.bash): `set -euo pipefail`, requires `TF_STATE_BUCKET` and `AWS_REGION`). Idempotently:
+4. New `layers/01-foundation/bootstrap/bootstrap-terraform-state-bucket.bash` (follows style of [scripts/one-time/export-route53-dns-zone-config.bash](scripts/one-time/export-route53-dns-zone-config.bash): `set -euo pipefail`, requires `TF_STATE_BUCKET` and `AWS_REGION`). Idempotently:
    - `aws s3api create-bucket` (with `LocationConstraint` unless `us-east-1`)
    - enable versioning
    - enable default SSE (AES256)
@@ -68,7 +68,7 @@ isProject: false
 5. [makefile](makefile)
    Add targets:
    - `terraform-bootstrap-state-bucket` -> runs the bootstrap script
-   - `terraform-init` -> `terraform -chdir=infrastructure/provisioning/terraform init -backend-config="bucket=$$TF_STATE_BUCKET" -backend-config="region=$$AWS_REGION"`
+   - `terraform-init` -> `terraform -chdir=layers/01-foundation/terraform/dns-zone init -backend-config="bucket=$$TF_STATE_BUCKET" -backend-config="region=$$AWS_REGION"`
 
 6. [_docs/00--ideas/01 migrate domain between aws accounts.md](_docs/00--ideas/01%20migrate%20domain%20between%20aws%20accounts.md)
    Not changed. `.gitignore` already ignores `.terraform/` and tfstate files.
@@ -78,7 +78,7 @@ isProject: false
 set -a && source .env && set +a
 make terraform-bootstrap-state-bucket
 make terraform-init
-terraform -chdir=infrastructure/provisioning/terraform plan
+terraform -chdir=layers/01-foundation/terraform/dns-zone plan
 ```
 Existing local `.terraform/` was initialised with `-backend=false`, so `init` will configure the backend fresh (no state to migrate).
 
