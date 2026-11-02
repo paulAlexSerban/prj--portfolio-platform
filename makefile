@@ -1,6 +1,8 @@
 DNS_ZONE_STACK ?= layers/01-foundation/terraform/dns-zone
 OIDC_STACK ?= layers/01-foundation/terraform/github-oidc-provider
 STATIC_SITES_STACK ?= layers/05-workloads/terraform/static-sites
+PHOENIX_NODE_STACK ?= layers/02-compute/terraform/phoenix-preview-node
+PHOENIX_STAGING_STACK ?= layers/05-workloads/terraform/phoenixartschool-staging
 
 # Certificates and their validation CNAMEs only. Does not attach hostnames
 # and does not wait for issuance. Run the copy script next.
@@ -78,3 +80,31 @@ terraform-static-sites-certs:
 
 sync-github-env-vars:
 	@bash scripts/tools/sync-github-env-vars.bash
+
+terraform-phoenix-node-init:
+	terraform -chdir=$(PHOENIX_NODE_STACK) init \
+		-backend-config="bucket=$$TF_STATE_BUCKET" \
+		-backend-config="region=$$AWS_REGION"
+
+terraform-phoenix-node-plan:
+	terraform -chdir=$(PHOENIX_NODE_STACK) plan
+
+terraform-phoenix-node-apply:
+	terraform -chdir=$(PHOENIX_NODE_STACK) apply
+
+terraform-phoenix-node-output:
+	terraform -chdir=$(PHOENIX_NODE_STACK) output
+
+terraform-phoenix-staging-init:
+	terraform -chdir=$(PHOENIX_STAGING_STACK) init \
+		-backend-config="bucket=$$TF_STATE_BUCKET" \
+		-backend-config="region=$$AWS_REGION"
+
+terraform-phoenix-staging-plan:
+	terraform -chdir=$(PHOENIX_STAGING_STACK) plan
+
+terraform-phoenix-staging-apply:
+	terraform -chdir=$(PHOENIX_STAGING_STACK) apply
+
+terraform-phoenix-staging-output:
+	terraform -chdir=$(PHOENIX_STAGING_STACK) output

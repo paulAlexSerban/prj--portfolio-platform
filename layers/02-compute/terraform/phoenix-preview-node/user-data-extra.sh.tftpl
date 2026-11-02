@@ -1,0 +1,30 @@
+install -d -m 755 /opt/${client_slug}/apache
+cat > /etc/${client_slug}-backup.env <<'EOF'
+RELEASE_BUCKET=${bucket}
+AWS_REGION=${aws_region}
+EOF
+cat > /opt/${client_slug}/backup.sh <<'EOF'
+#!/bin/bash
+echo "backup script not installed yet; run make deploy-staging from the WordPress repo"
+exit 0
+EOF
+chmod 755 /opt/${client_slug}/backup.sh
+cat > /etc/systemd/system/${client_slug}-backup.service <<'EOF'
+[Unit]
+Description=Nightly WordPress database backup
+[Service]
+Type=oneshot
+ExecStart=/opt/${client_slug}/backup.sh
+EOF
+cat > /etc/systemd/system/${client_slug}-backup.timer <<'EOF'
+[Unit]
+Description=Nightly WordPress database backup
+[Timer]
+OnCalendar=daily
+Persistent=true
+RandomizedDelaySec=30m
+[Install]
+WantedBy=timers.target
+EOF
+systemctl daemon-reload
+systemctl enable --now ${client_slug}-backup.timer

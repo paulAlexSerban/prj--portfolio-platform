@@ -104,3 +104,14 @@ make terraform-static-sites-apply
 `make sync-github-env-vars` copies the outputs onto the `production` and `news-data` GitHub Environments of `prj--personal-portfolio--v3`.
 
 Moving traffic off the old account is a separate, ordered procedure: [`_docs/02--plans/portfolio-cutover.md`](_docs/02--plans/portfolio-cutover.md).
+
+## 6. Phoenix Art School preview
+
+The WordPress preview is a separate pair of stacks. Apply the node first, deploy from `prj--phoenixartschool`, then apply CloudFront. The order, the wp-admin allowlist, and the certificate step are in [`_docs/02--plans/phoenixartschool-staging.md`](_docs/02--plans/phoenixartschool-staging.md).
+
+```bash
+make terraform-phoenix-node-init
+make terraform-phoenix-node-plan
+make terraform-phoenix-staging-init
+make terraform-phoenix-staging-plan
+```

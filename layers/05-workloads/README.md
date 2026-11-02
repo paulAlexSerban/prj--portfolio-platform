@@ -27,3 +27,16 @@ cp layers/05-workloads/terraform/static-sites/terraform.tfvars.example \
 make terraform-static-sites-init
 make terraform-static-sites-plan
 ```
+
+## Phoenix Art School staging
+
+`terraform/phoenixartschool-staging/` is the CloudFront distribution and Route 53 alias for `staging.phoenixartschool.paulserban.eu`. State key is `05-workloads/phoenixartschool/staging.tfstate`. It reads the preview node's address from the compute stack's state and the origin secret from Parameter Store, so the compute stack has to be applied first.
+
+`enable_custom_domain` defaults to false. The certificate and its validation CNAME are still created. Turn it on when the certificate can validate, following [`_docs/02--plans/phoenixartschool-staging.md`](../../_docs/02--plans/phoenixartschool-staging.md).
+
+```bash
+cp layers/05-workloads/terraform/phoenixartschool-staging/terraform.tfvars.example \
+  layers/05-workloads/terraform/phoenixartschool-staging/terraform.tfvars
+make terraform-phoenix-staging-init
+make terraform-phoenix-staging-plan
+```

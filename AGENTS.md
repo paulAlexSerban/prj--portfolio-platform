@@ -7,8 +7,10 @@ Terraform for the AWS account that hosts paulserban.eu. Application source stays
 | Path | What it is |
 | --- | --- |
 | `layers/01-foundation` | State bucket bootstrap, the Route 53 zone, the GitHub OIDC provider |
-| `layers/02-compute` through `layers/06-cross-cutting` | Reserved. See each README. |
+| `layers/02-compute/terraform/phoenix-preview-node` | ARM EC2 node for the Phoenix Art School WordPress preview |
+| `layers/03-platform-services` through `layers/04-delivery`, `layers/06-cross-cutting` | Reserved. See each README. |
 | `layers/05-workloads/terraform/static-sites` | Portfolio, blog, quiz, news-feed, and the news JSON CDN |
+| `layers/05-workloads/terraform/phoenixartschool-staging` | CloudFront and Route 53 for `staging.phoenixartschool.paulserban.eu` |
 | `modules/terraform` | Shared modules those stacks call |
 | `_docs/` | Spikes, plans, and the cutover runbook |
 | `scripts/` | One-time migration scripts and local helpers |
@@ -27,9 +29,13 @@ make terraform-static-sites-init
 make terraform-static-sites-plan
 make terraform-static-sites-apply
 make sync-github-env-vars
+make terraform-phoenix-node-init
+make terraform-phoenix-node-plan
+make terraform-phoenix-staging-init
+make terraform-phoenix-staging-plan
 ```
 
-`make terraform-static-sites-certs` creates the ACM certificates without attaching hostnames. The cutover order is in `_docs/02--plans/portfolio-cutover.md`.
+`make terraform-static-sites-certs` creates the ACM certificates without attaching hostnames. The cutover order is in `_docs/02--plans/portfolio-cutover.md`. The WordPress preview runbook is `_docs/02--plans/phoenixartschool-staging.md`.
 
 ## Conventions
 

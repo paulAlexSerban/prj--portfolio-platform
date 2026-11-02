@@ -1,0 +1,13 @@
+# Copy to terraform.tfvars (gitignored) before the first apply.
+
+aws_region     = "eu-central-1"
+domain_name    = "paulserban.eu"
+client_slug    = "phoenixartschool"
+bucket_suffix  = "7f3a" # pick your own; bucket names are global
+instance_type  = "t4g.small"
+basic_auth_user = "paul"
+
+# Addresses allowed to open /wp-admin. Empty locks it for everyone.
+# After apply, `make staging-set-admin-ip` in prj--phoenixartschool updates
+# this list and the running node together.
+admin_allowed_ips = []

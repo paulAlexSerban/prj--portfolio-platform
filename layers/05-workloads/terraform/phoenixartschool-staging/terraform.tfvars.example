@@ -1,0 +1,16 @@
+# Copy to terraform.tfvars (gitignored) before the first apply.
+# Apply the compute stack first. tf_state_bucket is TF_STATE_BUCKET from .env.
+
+aws_region          = "eu-central-1"
+domain_name         = "paulserban.eu"
+client_slug         = "phoenixartschool"
+tf_state_bucket     = "replace-with-tf-state-bucket"
+tf_state_region     = "us-east-1"
+
+# Leave false until the certificate can be validated. The runbook says when
+# to turn it on. True attaches staging.phoenixartschool.paulserban.eu.
+enable_custom_domain = false
+
+# Set false if your connection has no stable IPv6 address and wp-admin checks
+# should see only IPv4.
+is_ipv6_enabled = true

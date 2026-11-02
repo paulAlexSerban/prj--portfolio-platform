@@ -1,0 +1,27 @@
+#!/bin/bash
+# Installed once, on first boot. Cloud-init captures stdout in
+# /var/log/cloud-init-output.log.
+set -euo pipefail
+
+dnf install -y docker
+systemctl enable --now docker
+
+install -d -m 755 /usr/local/lib/docker/cli-plugins /usr/libexec/docker/cli-plugins
+curl -fsSL \
+  "https://github.com/docker/compose/releases/download/v2.32.4/docker-compose-linux-aarch64" \
+  -o /usr/local/lib/docker/cli-plugins/docker-compose
+chmod 755 /usr/local/lib/docker/cli-plugins/docker-compose
+cp /usr/local/lib/docker/cli-plugins/docker-compose /usr/libexec/docker/cli-plugins/docker-compose
+docker compose version
+
+if [ ! -f /swapfile ]; then
+  if ! fallocate -l 1G /swapfile; then
+    dd if=/dev/zero of=/swapfile bs=1M count=1024
+  fi
+  chmod 600 /swapfile
+  mkswap /swapfile
+  swapon /swapfile
+  grep -q '/swapfile' /etc/fstab || echo '/swapfile none swap sw 0 0' >> /etc/fstab
+fi
+
+${extra_user_data}
