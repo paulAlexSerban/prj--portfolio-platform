@@ -92,6 +92,9 @@ terraform-phoenix-node-plan:
 terraform-phoenix-node-apply:
 	terraform -chdir=$(PHOENIX_NODE_STACK) apply
 
+terraform-phoenix-node-destroy:
+	terraform -chdir=$(PHOENIX_NODE_STACK) destroy
+
 terraform-phoenix-node-output:
 	terraform -chdir=$(PHOENIX_NODE_STACK) output
 
@@ -105,6 +108,9 @@ terraform-phoenix-staging-plan:
 
 terraform-phoenix-staging-apply:
 	terraform -chdir=$(PHOENIX_STAGING_STACK) apply
+
+terraform-phoenix-staging-destroy:
+	terraform -chdir=$(PHOENIX_STAGING_STACK) destroy
 
 terraform-phoenix-staging-output:
 	terraform -chdir=$(PHOENIX_STAGING_STACK) output
